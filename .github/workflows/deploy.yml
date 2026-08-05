@@ -1,0 +1,63 @@
+# Build the app and publish it to GitHub Pages on every push to main.
+#
+# The two Supabase variables are inlined here rather than kept as repository
+# secrets. That is deliberate: `VITE_`-prefixed variables are baked into the
+# JavaScript bundle at build time, so they are readable by anyone who opens the
+# site regardless. The anon key is public by design and Row Level Security is
+# what protects the data — treating it as a secret would be theatre, and would
+# add a step someone has to repeat every time they fork this.
+#
+# The service_role key must never appear here, or anywhere else in this repo.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it half-published.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://nmstuuccmbojdumpvimn.supabase.co
+      VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tc3R1dWNjbWJvamR1bXB2aW1uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0NzkyMDgsImV4cCI6MjEwMTA1NTIwOH0.30hN1161BeyWUlrYZB9s7xPP0feo3a7Z5pLx_DnCIfA
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # A single-page app served from a static host 404s on a hard refresh of
+      # any sub-path. We use HashRouter so that should not happen — this is a
+      # belt-and-braces copy so a stray link still lands on the app.
+      - run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

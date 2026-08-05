@@ -1,0 +1,67 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+dist-ssr/
+build/
+*.local
+
+# Environment — NEVER commit these.
+# The anon key is public by design; the service_role key bypasses all RLS.
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Supabase local stack
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test output
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+# Caches
+.eslintcache
+.cache/
+.vite/
+*.tsbuildinfo
+
+# PWA generated artefacts (vite-plugin-pwa)
+dev-dist/
+public/sw.js
+public/workbox-*.js
+public/registerSW.js

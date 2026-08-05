@@ -1,0 +1,40 @@
+# Local development config. If your Supabase CLI rejects this file, delete it
+# and run `supabase init` — that regenerates a version-matched config and will
+# not touch supabase/migrations.
+
+project_id = "aquafix"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:5173"
+additional_redirect_urls = ["http://127.0.0.1:5173"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+# Local only: skip the confirmation email so seeded logins work immediately.
+enable_confirmations = false
+double_confirm_changes = false
