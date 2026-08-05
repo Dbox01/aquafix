@@ -329,7 +329,7 @@ Getting a live URL turned out to be the hardest part of the whole project so far
 
 **Supabase Edge Functions — does not work.** The obvious "keep everything on Supabase" answer. It fails: the Functions gateway does not deliver `text/html` to a browser as HTML, so the page renders as raw source. Confirmed with a three-way header probe serving identical markup with different headers — `text/html` with and without `nosniff`, plus a no-content-type control. All rendered as text. Functions are built for API endpoints, not web pages.
 
-**Supabase Storage — works, but is not hosting.** A public bucket serves files correctly from a real CDN. But there is no build step, no atomic deploy, no rollback, and no history. Every change means rebuild → zip → manual re-upload of three files. Fine as a stopgap to see the app; not a way to work.
+**Supabase Storage — does not work either.** *(Corrected 2026-08-05 — see ADR-012. The bucket serves the files, but a browser will not run them.)*
 
 **Static host connected to git — the actual answer.**
 
@@ -421,3 +421,39 @@ The script signs in as a `system_admin` account and uploads `dist/` over the Sto
 
 **Node's `fetch` ignores `HTTPS_PROXY`.** In a proxied environment `curl` succeeds while the same request from Node is refused, because undici does not read the proxy environment variables. `NODE_USE_ENV_PROXY=1` fixes it. Worth knowing before concluding that a host is blocked when it is only blocked for Node.
 - None of this changes ADR-009. When the repo and Vercel exist, delete the bucket and this script with it.
+
+
+---
+
+## ADR-012 — Supabase cannot host the frontend at all; GitHub Pages does
+
+**Status:** Accepted · **Date:** 2026-08-05 · **Supersedes the interim host in ADR-011**
+
+### Context
+
+ADR-009 recorded that Edge Functions cannot serve a web page, and treated the public `app` Storage bucket as a working stopgap. It is not one. Uploading `index.html` with `Content-Type: text/html` and fetching it back gives:
+
+```
+content-type: text/plain
+content-security-policy: default-src 'none'; sandbox
+x-content-type-options: nosniff
+```
+
+Supabase overrides the stored content type and attaches a sandbox CSP to every public object. The browser shows the markup as text and would refuse to execute the scripts even if it did not. This is deliberate on their side — it stops anyone hosting live pages on a `supabase.co` domain, which would make every project a potential XSS vector for every other project. No bucket setting, header or upload option changes it.
+
+**How this was missed for a whole slice:** the publish was verified by fetching the URL and reading the returned HTML, which was correct and complete. *Fetching a page proves the file is there. It does not prove a browser will run it.* The check that would have caught it — reading `content-type` on the response — takes one line. Any future "is it deployed?" check reads the response headers, not just the body.
+
+### Decision
+
+**GitHub Pages**, built and deployed by GitHub Actions on push to `main`.
+
+It costs nothing, needs no account beyond the repo we wanted anyway, serves correct content types, and — unlike the Storage bucket — deploys are automatic, versioned and revertible. `.github/workflows/deploy.yml` builds with Node 20 and publishes `dist/`.
+
+The two `VITE_` variables are inlined in the workflow rather than stored as repository secrets. They are compiled into the bundle and readable by anyone who opens the site, so calling them secrets would be theatre. The `service_role` key is a different matter entirely and appears nowhere.
+
+### Consequences
+
+- The repo must be **public** — GitHub Pages on a private repo needs a paid plan.
+- `base: './'` in `vite.config.ts` and `HashRouter` were already correct, which is why serving from `/<repo>/` needs no other change. The PWA manifest did need `start_url: './'` — an absolute `/` would have launched the installed app at the domain root and 404'd.
+- ADR-009's preference for Vercel still stands on the merits (preview deploys per branch). Pages is what gets the testing team a URL today with the fewest clicks from someone who has none to spare. Moving to Vercel later is importing the same repo; nothing here blocks it.
+- **Delete the `app` Storage bucket and `scripts/publish.mjs`** once Pages is live. Leaving a half-working second copy of the frontend around is how someone tests the wrong URL for an afternoon.
